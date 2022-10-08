@@ -18,6 +18,8 @@ from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 
+import random
+
 from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
 
@@ -82,16 +84,6 @@ def load_replacement(x):
         return y
     except Exception:
         return x
-
-
-def check_safety(x_image):
-    safety_checker_input = safety_feature_extractor(numpy_to_pil(x_image), return_tensors="pt")
-    x_checked_image, has_nsfw_concept = safety_checker(images=x_image, clip_input=safety_checker_input.pixel_values)
-    assert x_checked_image.shape[0] == len(has_nsfw_concept)
-    for i in range(len(has_nsfw_concept)):
-        if has_nsfw_concept[i]:
-            x_checked_image[i] = load_replacement(x_checked_image[i])
-    return x_checked_image, has_nsfw_concept
 
 
 def main():
@@ -216,7 +208,8 @@ def main():
     parser.add_argument(
         "--seed",
         type=int,
-        default=42,
+        default=random.randint(0, 1000),
+        #default=42,
         help="the seed (for reproducible sampling)",
     )
     parser.add_argument(
@@ -225,6 +218,12 @@ def main():
         help="evaluate at this precision",
         choices=["full", "autocast"],
         default="autocast"
+    )
+    parser.add_argument(
+        "--append",
+        type=str,
+        help="append to each prompt",
+        default="",
     )
     opt = parser.parse_args()
 
@@ -257,6 +256,7 @@ def main():
 
     batch_size = opt.n_samples
     n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
+    prompt = None
     if not opt.from_file:
         prompt = opt.prompt
         assert prompt is not None
@@ -265,7 +265,10 @@ def main():
     else:
         print(f"reading prompts from {opt.from_file}")
         with open(opt.from_file, "r") as f:
-            data = f.read().splitlines()
+            data = []
+            lines = f.readlines()
+            for line in lines:
+                data.append(line.strip() + opt.append)
             data = list(chunk(data, batch_size))
 
     sample_path = os.path.join(outpath, "samples")
@@ -290,6 +293,7 @@ def main():
                             uc = model.get_learned_conditioning(batch_size * [""])
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
+                        print(prompts)
                         c = model.get_learned_conditioning(prompts)
                         shape = [opt.C, opt.H // opt.f, opt.W // opt.f]
                         samples_ddim, _ = sampler.sample(S=opt.ddim_steps,
@@ -315,8 +319,19 @@ def main():
                                 x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                                 img = Image.fromarray(x_sample.astype(np.uint8))
                                 #img = put_watermark(img, wm_encoder)
-                                img.save(os.path.join(sample_path, f"{base_count:05}.png"))
-                                base_count += 1
+                                #img.save(os.path.join(sample_path, f"{base_count:05}.png"))
+                                fileexists = True
+                                if opt.from_file:
+                                    prompt = prompts[0]
+                                fname = prompt
+                                i = 0
+                                while fileexists:
+                                    i += 1
+                                    use_fname = fname + str(i)
+                                    fileexists = os.path.isfile(f"{sample_path}/{use_fname}.png")
+                                img.save(f"{sample_path}/{use_fname}.png")
+
+                            base_count += 1
 
                         if not opt.skip_grid:
                             all_samples.append(x_checked_image_torch)
@@ -330,7 +345,7 @@ def main():
                     # to image
                     grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
                     img = Image.fromarray(grid.astype(np.uint8))
-                    img = put_watermark(img, wm_encoder)
+                   # img = put_watermark(img, wm_encoder)
                     img.save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
                     grid_count += 1
 
