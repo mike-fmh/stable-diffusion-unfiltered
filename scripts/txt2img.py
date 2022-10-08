@@ -28,6 +28,25 @@ from transformers import AutoFeatureExtractor
 #safety_model_id = "CompVis/stable-diffusion-safety-checker"
 #safety_feature_extractor = AutoFeatureExtractor.from_pretrained(safety_model_id)
 #safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
+import unicodedata
+import re
+
+
+def slugify(value, allow_unicode=False):
+    """
+    Taken from https://github.com/django/django/blob/master/django/utils/text.py
+    Convert to ASCII if 'allow_unicode' is False. Convert spaces or repeated
+    dashes to single dashes. Remove characters that aren't alphanumerics,
+    underscores, or hyphens. Convert to lowercase. Also strip leading and
+    trailing whitespace, dashes, and underscores.
+    """
+    value = str(value)
+    if allow_unicode:
+        value = unicodedata.normalize('NFKC', value)
+    else:
+        value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
+    value = re.sub(r'[^\w\s-]', '', value.lower())
+    return re.sub(r'[-\s]+', '-', value).strip('-_')
 
 
 def chunk(it, size):
@@ -328,10 +347,10 @@ def main():
                                 while fileexists:
                                     i += 1
                                     use_fname = fname + str(i)
+                                    use_fname = slugify(use_fname)
                                     fileexists = os.path.isfile(f"{sample_path}/{use_fname}.png")
                                 img.save(f"{sample_path}/{use_fname}.png")
-
-                            base_count += 1
+                                base_count += 1
 
                         if not opt.skip_grid:
                             all_samples.append(x_checked_image_torch)
