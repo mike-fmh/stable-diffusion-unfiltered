@@ -277,7 +277,7 @@ def main():
     n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
     prompt = None
     if not opt.from_file:
-        prompt = opt.prompt
+        prompt = opt.prompt + opt.append
         assert prompt is not None
         data = [batch_size * [prompt]]
 
@@ -349,7 +349,7 @@ def main():
                                     use_fname = fname + str(i)
                                     use_fname = slugify(use_fname)
                                     fileexists = os.path.isfile(f"{sample_path}/{use_fname}.png")
-                                img.save(f"{sample_path}/{use_fname}.png")
+                                img.save(f"{sample_path}/{use_fname}-{opt.seed}.png")
                                 base_count += 1
 
                         if not opt.skip_grid:
