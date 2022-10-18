@@ -83,7 +83,7 @@ def main():
         "--prompt",
         type=str,
         nargs="?",
-        default="a painting of a virus monster playing guitar",
+        default="",
         help="the prompt to render"
     )
 
@@ -274,6 +274,7 @@ def main():
             init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
             init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
             files.append(init_latent)
+        print(len(files))
 
     precision_scope = autocast if opt.precision == "autocast" else nullcontext
     with torch.no_grad():
@@ -281,9 +282,9 @@ def main():
             with model.ema_scope():
                 tic = time.time()
                 all_samples = list()
-                for n in trange(opt.n_iter, desc="Sampling"):
-                    for file in files:
-                        for prompts in tqdm(data, desc="data"):
+                for n in range(opt.n_iter):
+                    for file in tqdm(files, desc="files"):
+                        for prompts in tqdm(data, desc="data", disable=True):
                             uc = None
                             if opt.scale != 1.0:
                                 uc = model.get_learned_conditioning(batch_size * [""])
