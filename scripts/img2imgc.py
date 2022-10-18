@@ -255,16 +255,25 @@ def main():
     base_count = len(os.listdir(sample_path))
     grid_count = len(os.listdir(outpath)) - 1
 
-    assert os.path.isfile(opt.init_img)
-    init_image = load_img(opt.init_img).to(device)
-    init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
-    init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
-
     sampler.make_schedule(ddim_num_steps=opt.ddim_steps, ddim_eta=opt.ddim_eta, verbose=False)
 
     assert 0. <= opt.strength <= 1., 'can only work with strength in [0.0, 1.0]'
     t_enc = int(opt.strength * opt.ddim_steps)
     print(f"target t_enc is {t_enc} steps")
+    files = []
+    if opt.inpdir is None:
+        assert os.path.isfile(opt.init_img)
+        init_image = load_img(opt.init_img).to(device)
+        init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
+        init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
+        files.append(init_latent)
+    else:
+        for filename in os.listdir(opt.inpdir):
+            assert os.path.isfile(os.path.join(opt.inpdir, filename))
+            init_image = load_img(os.path.join(opt.inpdir, filename)).to(device)
+            init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
+            init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
+            files.append(init_latent)
 
     precision_scope = autocast if opt.precision == "autocast" else nullcontext
     with torch.no_grad():
@@ -273,48 +282,49 @@ def main():
                 tic = time.time()
                 all_samples = list()
                 for n in trange(opt.n_iter, desc="Sampling"):
-                    for prompts in tqdm(data, desc="data"):
-                        uc = None
-                        if opt.scale != 1.0:
-                            uc = model.get_learned_conditioning(batch_size * [""])
-                        if isinstance(prompts, tuple):
-                            prompts = list(prompts)
-                        c = model.get_learned_conditioning(prompts)
+                    for file in files:
+                        for prompts in tqdm(data, desc="data"):
+                            uc = None
+                            if opt.scale != 1.0:
+                                uc = model.get_learned_conditioning(batch_size * [""])
+                            if isinstance(prompts, tuple):
+                                prompts = list(prompts)
+                            c = model.get_learned_conditioning(prompts)
 
-                        # encode (scaled latent)
-                        z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
-                        # decode it
-                        samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
-                                                 unconditional_conditioning=uc,)
+                            # encode (scaled latent)
+                            z_enc = sampler.stochastic_encode(file, torch.tensor([t_enc]*batch_size).to(device))
+                            # decode it
+                            samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
+                                                     unconditional_conditioning=uc,)
 
-                        x_samples = model.decode_first_stage(samples)
-                        x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
+                            x_samples = model.decode_first_stage(samples)
+                            x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
 
-                        if not opt.skip_save:
-                            for x_sample in x_samples:
-                                x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
-                                img = Image.fromarray(x_sample.astype(np.uint8))
-                                #img.save(os.path.join(sample_path, f"{base_count:05}.png"))
-                                if opt.inpdir is not None:
-                                    storedir = opt.inpdir.split("\\")[-1]
-                                else:
-                                    storedir = "result"
-                                fileexists = True
-                                fname = "result"
-                                i = 0
-                                while fileexists:
-                                    i += 1
-                                    use_fname = fname + f"{i}-{opt.seed}"
-                                    use_fname = slugify(use_fname)
-                                    fileexists = os.path.isfile(f"{sample_path}/{storedir}/{use_fname}.png")
-                                if not os.path.exists(f"{sample_path}/{storedir}"):
-                                    os.makedirs(f"{sample_path}/{storedir}")
-                                try:
-                                    img.save(f"{sample_path}/{storedir}/{use_fname}.png")
-                                except:
-                                    img.save(f"{sample_path}/{storedir}/out.png")
-                                base_count += 1
-                        all_samples.append(x_samples)
+                            if not opt.skip_save:
+                                for x_sample in x_samples:
+                                    x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
+                                    img = Image.fromarray(x_sample.astype(np.uint8))
+                                    #img.save(os.path.join(sample_path, f"{base_count:05}.png"))
+                                    if opt.inpdir is not None:
+                                        storedir = opt.inpdir.split("\\")[-1]
+                                    else:
+                                        storedir = "result"
+                                    fileexists = True
+                                    fname = "result"
+                                    i = 0
+                                    while fileexists:
+                                        i += 1
+                                        use_fname = fname + f"{i}-{opt.seed}"
+                                        use_fname = slugify(use_fname)
+                                        fileexists = os.path.isfile(f"{sample_path}/{storedir}/{use_fname}.png")
+                                    if not os.path.exists(f"{sample_path}/{storedir}"):
+                                        os.makedirs(f"{sample_path}/{storedir}")
+                                    try:
+                                        img.save(f"{sample_path}/{storedir}/{use_fname}.png")
+                                    except:
+                                        img.save(f"{sample_path}/{storedir}/out.png")
+                                    base_count += 1
+                            all_samples.append(x_samples)
 
                 toc = time.time()
 
