@@ -285,12 +285,7 @@ def main():
                 tic = time.time()
                 all_samples = list()
                 for n in range(opt.n_iter):
-                    i = 0
                     for file in tqdm(files, desc="Generating images"):
-                        i += 1
-                        if i % 100 == 0:
-                            print("sleep 10 sec")
-                            time.sleep(10)   # to let gpu cool down
                         for prompts in tqdm(data, desc="data", disable=True):
                             uc = None
                             if opt.scale != 1.0:
