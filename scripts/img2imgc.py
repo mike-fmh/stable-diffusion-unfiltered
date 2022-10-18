@@ -266,14 +266,14 @@ def main():
         init_image = load_img(opt.init_img).to(device)
         init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
-        files.append(init_latent)
+        files.append([init_latent, opt.init_img.split("\\")[-1]])
     else:
         for filename in os.listdir(opt.inpdir):
             assert os.path.isfile(os.path.join(opt.inpdir, filename))
             init_image = load_img(os.path.join(opt.inpdir, filename)).to(device)
             init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
             init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
-            files.append(init_latent)
+            files.append([init_latent, filename])
         print(len(files))
 
     precision_scope = autocast if opt.precision == "autocast" else nullcontext
@@ -293,7 +293,7 @@ def main():
                             c = model.get_learned_conditioning(prompts)
 
                             # encode (scaled latent)
-                            z_enc = sampler.stochastic_encode(file, torch.tensor([t_enc]*batch_size).to(device))
+                            z_enc = sampler.stochastic_encode(file[0], torch.tensor([t_enc]*batch_size).to(device))
                             # decode it
                             samples = sampler.decode(z_enc, c, t_enc, unconditional_guidance_scale=opt.scale,
                                                      unconditional_conditioning=uc,)
@@ -311,7 +311,7 @@ def main():
                                     else:
                                         storedir = "result"
                                     fileexists = True
-                                    fname = "result"
+                                    fname = file[1]
                                     i = 0
                                     while fileexists:
                                         i += 1
