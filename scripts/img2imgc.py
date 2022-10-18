@@ -39,6 +39,7 @@ def slugify(value, allow_unicode=False):
     value = re.sub(r'[^\w\s-]', '', value.lower())
     return re.sub(r'[-\s]+', '-', value).strip('-_')
 
+
 def chunk(it, size):
     it = iter(it)
     return iter(lambda: tuple(islice(it, size)), ())
@@ -283,7 +284,11 @@ def main():
                 tic = time.time()
                 all_samples = list()
                 for n in range(opt.n_iter):
+                    i = 0
                     for file in tqdm(files, desc="files"):
+                        i += 1
+                        if i % 10 == 0:
+                            time.sleep(10)   # to let gpu cool down
                         for prompts in tqdm(data, desc="data", disable=True):
                             uc = None
                             if opt.scale != 1.0:
