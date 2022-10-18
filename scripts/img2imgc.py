@@ -19,6 +19,25 @@ from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 
+import unicodedata
+import re
+
+
+def slugify(value, allow_unicode=False):
+    """
+    Taken from https://github.com/django/django/blob/master/django/utils/text.py
+    Convert to ASCII if 'allow_unicode' is False. Convert spaces or repeated
+    dashes to single dashes. Remove characters that aren't alphanumerics,
+    underscores, or hyphens. Convert to lowercase. Also strip leading and
+    trailing whitespace, dashes, and underscores.
+    """
+    value = str(value)
+    if allow_unicode:
+        value = unicodedata.normalize('NFKC', value)
+    else:
+        value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
+    value = re.sub(r'[^\w\s-]', '', value.lower())
+    return re.sub(r'[-\s]+', '-', value).strip('-_')
 
 def chunk(it, size):
     it = iter(it)
@@ -275,21 +294,27 @@ def main():
                             for x_sample in x_samples:
                                 x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                                 img = Image.fromarray(x_sample.astype(np.uint8))
-                                img.save(f"{sample_path}{base_count:05}.png")
+                                #img.save(os.path.join(sample_path, f"{base_count:05}.png"))
+                                if opt.inpdir is not None:
+                                    storedir = opt.inpdir.split("\\")[-1]
+                                else:
+                                    storedir = "result"
+                                fileexists = True
+                                fname = "result"
+                                i = 0
+                                while fileexists:
+                                    i += 1
+                                    use_fname = fname + f"{i}-{opt.seed}"
+                                    use_fname = slugify(use_fname)
+                                    fileexists = os.path.isfile(f"{sample_path}/{storedir}/{use_fname}.png")
+                                if not os.path.exists(f"{sample_path}/{storedir}"):
+                                    os.makedirs(f"{sample_path}/{storedir}")
+                                try:
+                                    img.save(f"{sample_path}/{storedir}/{use_fname}.png")
+                                except:
+                                    img.save(f"{sample_path}/{storedir}/out.png")
                                 base_count += 1
                         all_samples.append(x_samples)
-
-                if not opt.skip_grid:
-                    # additionally, save as grid
-                    grid = torch.stack(all_samples, 0)
-                    grid = rearrange(grid, 'n b c h w -> (n b) c h w')
-                    grid = make_grid(grid, nrow=n_rows)
-
-                    # to image
-                    grid = 255. * rearrange(grid, 'c h w -> h w c').cpu().numpy()
-                    img = Image.fromarray(grid.astype(np.uint8))
-                    img.save(os.path.join(outpath, f'grid-{grid_count:04}.png'))
-                    grid_count += 1
 
                 toc = time.time()
 
