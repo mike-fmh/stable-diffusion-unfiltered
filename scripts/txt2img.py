@@ -346,10 +346,13 @@ def main():
                                 i = 0
                                 while fileexists:
                                     i += 1
-                                    use_fname = fname + str(i)
+                                    use_fname = fname + f"{i}-{opt.seed}"
                                     use_fname = slugify(use_fname)
                                     fileexists = os.path.isfile(f"{sample_path}/{use_fname}.png")
-                                img.save(f"{sample_path}/{use_fname}-{opt.seed}.png")
+                                try:
+                                    img.save(f"{sample_path}/{use_fname}.png")
+                                except:
+                                    img.save(f"{sample_path}/out.png")
                                 base_count += 1
 
                         if not opt.skip_grid:
