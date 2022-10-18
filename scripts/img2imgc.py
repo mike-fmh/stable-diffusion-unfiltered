@@ -68,9 +68,9 @@ def load_model_from_config(config, ckpt, verbose=False):
 def load_img(path):
     image = Image.open(path).convert("RGB")
     w, h = image.size
-    print(f"loaded input image of size ({w}, {h}) from {path}")
+    #print(f"loaded input image of size ({w}, {h}) from {path}")
     w, h = map(lambda x: x - x % 32, (w, h))  # resize to integer multiple of 32
-    image = image.resize((w, h), resample=PIL.Image.LANCZOS)
+    image = image.resize((w, h), resample=PIL.Image.Resampling.LANCZOS)
     image = np.array(image).astype(np.float32) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
     image = torch.from_numpy(image)
@@ -269,7 +269,7 @@ def main():
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
         files.append([init_latent, opt.init_img.split("\\")[-1]])
     else:
-        for filename in os.listdir(opt.inpdir):
+        for filename in tqdm(os.listdir(opt.inpdir), desc="Loading files"):
             assert os.path.isfile(os.path.join(opt.inpdir, filename))
             init_image = load_img(os.path.join(opt.inpdir, filename)).to(device)
             init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
