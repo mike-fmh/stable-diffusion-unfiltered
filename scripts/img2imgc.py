@@ -274,6 +274,7 @@ def main():
             init_image = load_img(os.path.join(opt.inpdir, filename)).to(device)
             init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
             init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
+            filename = filename.split(".")[0]
             files.append([init_latent, filename])
         print(len(files))
 
@@ -285,9 +286,9 @@ def main():
                 all_samples = list()
                 for n in range(opt.n_iter):
                     i = 0
-                    for file in tqdm(files, desc="Generating new images"):
+                    for file in tqdm(files, desc="Generating images"):
                         i += 1
-                        if i % 10 == 0:
+                        if i % 100 == 0:
                             time.sleep(10)   # to let gpu cool down
                         for prompts in tqdm(data, desc="data", disable=True):
                             uc = None
@@ -320,7 +321,7 @@ def main():
                                     i = 0
                                     while fileexists:
                                         i += 1
-                                        use_fname = fname + f"{i}-{opt.seed}"
+                                        use_fname = fname + f"-{i}-{opt.seed}"
                                         use_fname = slugify(use_fname)
                                         fileexists = os.path.isfile(f"{sample_path}/{storedir}/{use_fname}.png")
                                     if not os.path.exists(f"{sample_path}/{storedir}"):
