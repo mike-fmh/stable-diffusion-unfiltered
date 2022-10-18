@@ -289,6 +289,7 @@ def main():
                     for file in tqdm(files, desc="Generating images"):
                         i += 1
                         if i % 100 == 0:
+                            print("sleep 10 sec")
                             time.sleep(10)   # to let gpu cool down
                         for prompts in tqdm(data, desc="data", disable=True):
                             uc = None
