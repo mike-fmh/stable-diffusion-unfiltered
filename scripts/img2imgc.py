@@ -285,7 +285,7 @@ def main():
                 all_samples = list()
                 for n in range(opt.n_iter):
                     i = 0
-                    for file in tqdm(files, desc="files"):
+                    for file in tqdm(files, desc="Generating new images"):
                         i += 1
                         if i % 10 == 0:
                             time.sleep(10)   # to let gpu cool down
