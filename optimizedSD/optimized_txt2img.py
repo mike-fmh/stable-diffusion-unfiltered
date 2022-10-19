@@ -15,8 +15,29 @@ from contextlib import contextmanager, nullcontext
 from ldm.util import instantiate_from_config
 from optimUtils import split_weighted_subprompts, logger
 from transformers import logging
-# from samplers import CompVisDenoiser
+# from samplers import
+
+import unicodedata
+import re
+
 logging.set_verbosity_error()
+
+
+def slugify(value, allow_unicode=False):
+    """
+    Taken from https://github.com/django/django/blob/master/django/utils/text.py
+    Convert to ASCII if 'allow_unicode' is False. Convert spaces or repeated
+    dashes to single dashes. Remove characters that aren't alphanumerics,
+    underscores, or hyphens. Convert to lowercase. Also strip leading and
+    trailing whitespace, dashes, and underscores.
+    """
+    value = str(value)
+    if allow_unicode:
+        value = unicodedata.normalize('NFKC', value)
+    else:
+        value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
+    value = re.sub(r'[^\w\s-]', '', value.lower())
+    return re.sub(r'[-\s]+', '-', value).strip('-_')
 
 
 def chunk(it, size):
@@ -103,7 +124,7 @@ parser.add_argument(
 parser.add_argument(
     "--n_samples",
     type=int,
-    default=5,
+    default=1,
     help="how many samples to produce for each given prompt. A.k.a. batch size",
 )
 parser.add_argument(
@@ -318,9 +339,22 @@ with torch.no_grad():
                     x_samples_ddim = modelFS.decode_first_stage(samples_ddim[i].unsqueeze(0))
                     x_sample = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
                     x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
-                    Image.fromarray(x_sample.astype(np.uint8)).save(
-                        os.path.join(sample_path, "seed_" + str(opt.seed) + "_" + f"{base_count:05}.{opt.format}")
-                    )
+                    img = Image.fromarray(x_sample.astype(np.uint8))
+                    #img.save(os.path.join(sample_path, "seed_" + str(opt.seed) + "_" + f"{base_count:05}.{opt.format}"))
+                    fileexists = True
+                    if opt.from_file:
+                        prompt = prompts[0]
+                    fname = prompt
+                    i = 0
+                    while fileexists:
+                        i += 1
+                        use_fname = fname + f"{i}-{opt.seed}"
+                        use_fname = slugify(use_fname)
+                        fileexists = os.path.isfile(f"{sample_path}/{use_fname}.png")
+                    try:
+                        img.save(f"{sample_path}/{use_fname}.png")
+                    except:
+                        img.save(f"{sample_path}/out.png")
                     seeds += str(opt.seed) + ","
                     opt.seed += 1
                     base_count += 1
