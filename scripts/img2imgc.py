@@ -269,12 +269,16 @@ def main():
         init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
         files.append([init_latent, opt.init_img.split("\\")[-1]])
     else:
-        for filename in tqdm(os.listdir(opt.inpdir), desc="Loading files"):
+        for file in tqdm(os.listdir(opt.inpdir), desc="Loading files"):
+            filename = os.fsdecode(file)
+            if ".png" not in filename:
+                continue
             assert os.path.isfile(os.path.join(opt.inpdir, filename))
             init_image = load_img(os.path.join(opt.inpdir, filename)).to(device)
             init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
             init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
             filename = filename.split(".")[0]
+            #print("\n" + filename)
             files.append([init_latent, filename])
         print(len(files))
 
@@ -284,8 +288,15 @@ def main():
             with model.ema_scope():
                 tic = time.time()
                 all_samples = list()
+                if opt.inpdir is not None:
+                    storedir = opt.inpdir.split("\\")[-1]
+                else:
+                    storedir = "result"
                 for n in range(opt.n_iter):
-                    for file in tqdm(files, desc="Generating images"):
+                    for file in tqdm(files, desc="files"):
+                        if os.path.isfile(f"{sample_path}/{storedir}/{file[1]}-1-172.png"):
+                            print(f"skipping {file[1]}-1-172.png already exists")
+                            continue
                         for prompts in tqdm(data, desc="data", disable=True):
                             uc = None
                             if opt.scale != 1.0:
@@ -308,10 +319,6 @@ def main():
                                     x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                                     img = Image.fromarray(x_sample.astype(np.uint8))
                                     #img.save(os.path.join(sample_path, f"{base_count:05}.png"))
-                                    if opt.inpdir is not None:
-                                        storedir = opt.inpdir.split("\\")[-1]
-                                    else:
-                                        storedir = "result"
                                     fileexists = True
                                     fname = file[1]
                                     i = 0
