@@ -59,10 +59,16 @@ ckpt = "models/ldm/stable-diffusion-v1/model.ckpt"
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
-    "--prompt", type=str, nargs="?", default="a painting of a virus monster playing guitar", help="the prompt to render"
+    "--prompt", type=str, nargs="?", default="", help="the prompt to render"
 )
 parser.add_argument("--outdir", type=str, nargs="?", help="dir to write results to", default="outputs/img2img-samples")
 parser.add_argument("--init-img", type=str, nargs="?", help="path to the input image")
+
+parser.add_argument(
+    "--inpdir",
+    type=str,
+    default=None
+)
 
 parser.add_argument(
     "--skip_grid",
@@ -114,7 +120,7 @@ parser.add_argument(
 parser.add_argument(
     "--n_samples",
     type=int,
-    default=5,
+    default=1,
     help="how many samples to produce for each given prompt. A.k.a. batch size",
 )
 parser.add_argument(
@@ -208,9 +214,6 @@ for key in lo:
 
 config = OmegaConf.load(f"{config}")
 
-assert os.path.isfile(opt.init_img)
-init_image = load_img(opt.init_img, opt.H, opt.W).to(opt.device)
-
 model = instantiate_from_config(config.modelUNet)
 _, _ = model.load_state_dict(sd, strict=False)
 model.eval()
@@ -249,8 +252,26 @@ else:
 
 modelFS.to(opt.device)
 
-init_image = repeat(init_image, "1 ... -> b ...", b=batch_size)
-init_latent = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image))  # move to latent space
+files = []
+if opt.inpdir is None:
+    assert os.path.isfile(opt.init_img)
+    init_image = load_img(opt.init_img, opt.H, opt.W).to(opt.device)
+    init_image = repeat(init_image, "1 ... -> b ...", b=batch_size)
+    init_latent = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image))  # move to latent space
+    files.append([init_latent, opt.init_img.split("\\")[-1]])
+else:
+    for file in tqdm(os.listdir(opt.inpdir), desc="Loading files"):
+        filename = os.fsdecode(file)
+        assert os.path.isfile(os.path.join(opt.inpdir, filename))
+        init_image = load_img(os.path.join(opt.inpdir, filename), opt.H, opt.W).to(opt.device)
+        if ".png" not in filename:
+            continue
+        init_image = repeat(init_image, "1 ... -> b ...", b=batch_size)
+        init_latent = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image))  # move to latent space
+        filename = filename.split(".")[0]
+        # print("\n" + filename)
+        files.append([init_latent, filename])
+    print(len(files))
 
 if opt.device != "cpu":
     mem = torch.cuda.memory_allocated(device=opt.device) / 1e6
@@ -274,79 +295,84 @@ with torch.no_grad():
 
     all_samples = list()
     for n in trange(opt.n_iter, desc="Sampling"):
-        for prompts in tqdm(data, desc="data"):
+        for file in tqdm(files, desc="files"):
+            for prompts in tqdm(data, desc="data"):
+                sample_path = os.path.join(outpath, "_".join(re.split(":| ", prompts[0])))[:150]
+                os.makedirs(sample_path, exist_ok=True)
+                base_count = len(os.listdir(sample_path))
 
-            sample_path = os.path.join(outpath, "_".join(re.split(":| ", prompts[0])))[:150]
-            os.makedirs(sample_path, exist_ok=True)
-            base_count = len(os.listdir(sample_path))
+                with precision_scope("cuda"):
+                    modelCS.to(opt.device)
+                    uc = None
+                    if opt.scale != 1.0:
+                        uc = modelCS.get_learned_conditioning(batch_size * [""])
+                    if isinstance(prompts, tuple):
+                        prompts = list(prompts)
 
-            with precision_scope("cuda"):
-                modelCS.to(opt.device)
-                uc = None
-                if opt.scale != 1.0:
-                    uc = modelCS.get_learned_conditioning(batch_size * [""])
-                if isinstance(prompts, tuple):
-                    prompts = list(prompts)
+                    if opt.inpdir is not None:
+                        storedir = opt.inpdir.split("\\")[-1]
+                    else:
+                        storedir = "result"
 
-                subprompts, weights = split_weighted_subprompts(prompts[0])
-                if len(subprompts) > 1:
-                    c = torch.zeros_like(uc)
-                    totalWeight = sum(weights)
-                    # normalize each "sub prompt" and add it
-                    for i in range(len(subprompts)):
-                        weight = weights[i]
-                        # if not skip_normalize:
-                        weight = weight / totalWeight
-                        c = torch.add(c, modelCS.get_learned_conditioning(subprompts[i]), alpha=weight)
-                else:
-                    c = modelCS.get_learned_conditioning(prompts)
+                    subprompts, weights = split_weighted_subprompts(prompts[0])
+                    if len(subprompts) > 1:
+                        c = torch.zeros_like(uc)
+                        totalWeight = sum(weights)
+                        # normalize each "sub prompt" and add it
+                        for i in range(len(subprompts)):
+                            weight = weights[i]
+                            # if not skip_normalize:
+                            weight = weight / totalWeight
+                            c = torch.add(c, modelCS.get_learned_conditioning(subprompts[i]), alpha=weight)
+                    else:
+                        c = modelCS.get_learned_conditioning(prompts)
 
-                if opt.device != "cpu":
-                    mem = torch.cuda.memory_allocated(device=opt.device) / 1e6
-                    modelCS.to("cpu")
-                    while torch.cuda.memory_allocated(device=opt.device) / 1e6 >= mem:
-                        time.sleep(1)
+                    if opt.device != "cpu":
+                        mem = torch.cuda.memory_allocated(device=opt.device) / 1e6
+                        modelCS.to("cpu")
+                        while torch.cuda.memory_allocated(device=opt.device) / 1e6 >= mem:
+                            time.sleep(1)
 
-                # encode (scaled latent)
-                z_enc = model.stochastic_encode(
-                    init_latent,
-                    torch.tensor([t_enc] * batch_size).to(opt.device),
-                    opt.seed,
-                    opt.ddim_eta,
-                    opt.ddim_steps,
-                )
-                # decode it
-                samples_ddim = model.sample(
-                    t_enc,
-                    c,
-                    z_enc,
-                    unconditional_guidance_scale=opt.scale,
-                    unconditional_conditioning=uc,
-                    sampler = opt.sampler
-                )
-
-                modelFS.to(opt.device)
-                print("saving images")
-                for i in range(batch_size):
-
-                    x_samples_ddim = modelFS.decode_first_stage(samples_ddim[i].unsqueeze(0))
-                    x_sample = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
-                    x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
-                    Image.fromarray(x_sample.astype(np.uint8)).save(
-                        os.path.join(sample_path, "seed_" + str(opt.seed) + "_" + f"{base_count:05}.{opt.format}")
+                    # encode (scaled latent)
+                    z_enc = model.stochastic_encode(
+                        file[0],
+                        torch.tensor([t_enc] * batch_size).to(opt.device),
+                        opt.seed,
+                        opt.ddim_eta,
+                        opt.ddim_steps,
                     )
-                    seeds += str(opt.seed) + ","
-                    opt.seed += 1
-                    base_count += 1
+                    # decode it
+                    samples_ddim = model.sample(
+                        t_enc,
+                        c,
+                        z_enc,
+                        unconditional_guidance_scale=opt.scale,
+                        unconditional_conditioning=uc,
+                        sampler = opt.sampler
+                    )
 
-                if opt.device != "cpu":
-                    mem = torch.cuda.memory_allocated(device=opt.device) / 1e6
-                    modelFS.to("cpu")
-                    while torch.cuda.memory_allocated(device=opt.device) / 1e6 >= mem:
-                        time.sleep(1)
+                    modelFS.to(opt.device)
+                    print("saving images")
+                    for i in range(batch_size):
 
-                del samples_ddim
-                print("memory_final = ", torch.cuda.memory_allocated(device=opt.device) / 1e6)
+                        x_samples_ddim = modelFS.decode_first_stage(samples_ddim[i].unsqueeze(0))
+                        x_sample = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
+                        x_sample = 255.0 * rearrange(x_sample[0].cpu().numpy(), "c h w -> h w c")
+                        Image.fromarray(x_sample.astype(np.uint8)).save(
+                            os.path.join(sample_path, "seed_" + str(opt.seed) + "_" + f"{base_count:05}.{opt.format}")
+                        )
+                        seeds += str(opt.seed) + ","
+                        opt.seed += 1
+                        base_count += 1
+
+                    if opt.device != "cpu":
+                        mem = torch.cuda.memory_allocated(device=opt.device) / 1e6
+                        modelFS.to("cpu")
+                        while torch.cuda.memory_allocated(device=opt.device) / 1e6 >= mem:
+                            time.sleep(1)
+
+                    del samples_ddim
+                    print("memory_final = ", torch.cuda.memory_allocated(device=opt.device) / 1e6)
 
 toc = time.time()
 
