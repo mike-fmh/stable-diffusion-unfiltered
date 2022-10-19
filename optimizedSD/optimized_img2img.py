@@ -230,11 +230,6 @@ modelFS = instantiate_from_config(config.modelFirstStage)
 _, _ = modelFS.load_state_dict(sd, strict=False)
 modelFS.eval()
 del sd
-if opt.device != "cpu" and opt.precision == "autocast":
-    model.half()
-    modelCS.half()
-    modelFS.half()
-    init_image = init_image.half()
 
 batch_size = opt.n_samples
 n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
@@ -256,6 +251,11 @@ files = []
 if opt.inpdir is None:
     assert os.path.isfile(opt.init_img)
     init_image = load_img(opt.init_img, opt.H, opt.W).to(opt.device)
+    if opt.device != "cpu" and opt.precision == "autocast":
+        model.half()
+        modelCS.half()
+        modelFS.half()
+        init_image = init_image.half()
     init_image = repeat(init_image, "1 ... -> b ...", b=batch_size)
     init_latent = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image))  # move to latent space
     files.append([init_latent, opt.init_img.split("\\")[-1]])
@@ -264,6 +264,11 @@ else:
         filename = os.fsdecode(file)
         assert os.path.isfile(os.path.join(opt.inpdir, filename))
         init_image = load_img(os.path.join(opt.inpdir, filename), opt.H, opt.W).to(opt.device)
+        if opt.device != "cpu" and opt.precision == "autocast":
+            model.half()
+            modelCS.half()
+            modelFS.half()
+            init_image = init_image.half()
         if ".png" not in filename:
             continue
         init_image = repeat(init_image, "1 ... -> b ...", b=batch_size)
