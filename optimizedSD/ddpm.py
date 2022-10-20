@@ -682,7 +682,7 @@ class UNet(DDPM):
             b0, b1, b2, b3 = x0.shape
             img_shape = (1, b1, b2, b3)
             tens = []
-            print("seeds used = ", [seed+s for s in range(b0)])
+            #print("seeds used = ", [seed+s for s in range(b0)])
             for _ in range(b0):
                 torch.manual_seed(seed)
                 tens.append(torch.randn(img_shape, device=x0.device))
@@ -712,7 +712,7 @@ class UNet(DDPM):
         timesteps = timesteps[:t_start]
         time_range = np.flip(timesteps)
         total_steps = timesteps.shape[0]
-        print(f"Running DDIM Sampling with {total_steps} timesteps")
+        #print(f"Running DDIM Sampling with {total_steps} timesteps")
 
         iterator = tqdm(time_range, desc='Decoding image', total=total_steps)
         x_dec = x_latent
