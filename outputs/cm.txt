@@ -4,3 +4,10 @@ conda activate ldm
 python scripts\txt2img.py --W 512 --H 512 --skip_grid --n_samples 1 --n_iter 1 --from-file  --append ""
 
 python scripts\img2imgc.py --inpdir
+
+python optimizedSD\optimized_txt2img.py --prompt "beautiful landscape" --H 576 --W 1024
+
+
+python scripts\img2imgc.py --inpdir "E:\Documents\Github\stable-diffusion-unfiltered\outputs\img2img-samples\heatwave_imgs" --seed 172
+
+python optimizedSD\optimized_img2img.py --inpdir "E:\Documents\Github\stable-diffusion-unfiltered\outputs\txt2img-samples\beautiful_landscape,_insanely_detailed,_ocean_sunset,_50mm,_photorealistic"
