@@ -61,13 +61,13 @@ def load_img(path, h0, w0):
     image = Image.open(path).convert("RGB")
     w, h = image.size
 
-    print(f"loaded input image of size ({w}, {h}) from {path}")
+    #print(f"loaded input image of size ({w}, {h}) from {path}")
     if h0 is not None and w0 is not None:
         h, w = h0, w0
 
     w, h = map(lambda x: x - x % 64, (w, h))  # resize to integer multiple of 32
 
-    print(f"New image size ({w}, {h})")
+    #print(f"New image size ({w}, {h})")
     image = image.resize((w, h), resample=Image.Resampling.LANCZOS)
     image = np.array(image).astype(np.float32) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
@@ -318,16 +318,21 @@ else:
     precision_scope = nullcontext
 
 seeds = ""
+sample_path = outpath
+if opt.inpdir is not None:
+    sample_path += "/samples/" + opt.inpdir.split("\\")[-1] + f"-{opt.strength}"
+else:
+    sample_path += f"/samples/result-{opt.strength}"
+os.makedirs(sample_path, exist_ok=True)
+base_count = len(os.listdir(sample_path))
 with torch.no_grad():
-
     all_samples = list()
     for n in trange(opt.n_iter, desc="Sampling"):
         for file in tqdm(files, desc="files"):
+            if os.path.isfile(f"{sample_path}/{file[1]}-1-{opt.seed}.png"):
+                print(f"skipping {file[1]}-1-{opt.seed}.png already exists")
+                continue
             for prompts in tqdm(data, desc="data"):
-                sample_path = os.path.join(outpath, "_".join(re.split(":| ", prompts[0])))[:150]
-                os.makedirs(sample_path, exist_ok=True)
-                base_count = len(os.listdir(sample_path))
-
                 with precision_scope("cuda"):
                     modelCS.to(opt.device)
                     uc = None
@@ -335,11 +340,6 @@ with torch.no_grad():
                         uc = modelCS.get_learned_conditioning(batch_size * [""])
                     if isinstance(prompts, tuple):
                         prompts = list(prompts)
-
-                    if opt.inpdir is not None:
-                        storedir = opt.inpdir.split("\\")[-1]
-                    else:
-                        storedir = "result"
 
                     subprompts, weights = split_weighted_subprompts(prompts[0])
                     if len(subprompts) > 1:
@@ -394,13 +394,13 @@ with torch.no_grad():
                             i += 1
                             use_fname = fname + f"-{i}-{opt.seed}"
                             use_fname = slugify(use_fname)
-                            fileexists = os.path.isfile(f"{sample_path}/{storedir}/{use_fname}.png")
-                        if not os.path.exists(f"{sample_path}/{storedir}"):
-                            os.makedirs(f"{sample_path}/{storedir}")
+                            fileexists = os.path.isfile(f"{sample_path}/{use_fname}.png")
                         try:
-                            img.save(f"{sample_path}/{storedir}/{use_fname}.png")
+                            img.save(f"{sample_path}/{use_fname}.png")
+                            print(f"{sample_path}/{use_fname}.png")
                         except:
-                            img.save(f"{sample_path}/{storedir}/out.png")
+                            img.save(f"{sample_path}/out.png")
+                            print(f"{sample_path}/out.png")
                         seeds += str(opt.seed) + ","
                         opt.seed += 1
                         base_count += 1
