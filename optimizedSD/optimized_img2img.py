@@ -289,9 +289,9 @@ else:
 
 sample_path = outpath
 if opt.inpdir is not None:
-    sample_path += "/samples/" + opt.inpdir.split("\\")[-1] + f"--strength{opt.strength}"
+    sample_path += "/samples/" + opt.inpdir.split("\\")[-1] + f"--strength_{opt.strength}"
 else:
-    sample_path += f"/samples/result--strength{opt.strength}"
+    sample_path += f"/samples/result--strength_{opt.strength}"
 os.makedirs(sample_path, exist_ok=True)
 base_count = len(os.listdir(sample_path))
 with torch.no_grad():
