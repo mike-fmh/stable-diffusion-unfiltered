@@ -289,9 +289,9 @@ def main():
                 tic = time.time()
                 all_samples = list()
                 if opt.inpdir is not None:
-                    storedir = opt.inpdir.split("\\")[-1]
+                    storedir = opt.inpdir.split("\\")[-1] + f"-{opt.strength}"
                 else:
-                    storedir = "result"
+                    storedir = f"result-{opt.strength}"
                 for n in range(opt.n_iter):
                     for file in tqdm(files, desc="files"):
                         if os.path.isfile(f"{sample_path}/{storedir}/{file[1]}-1-172.png"):
