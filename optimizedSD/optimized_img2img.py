@@ -317,7 +317,6 @@ if opt.precision == "autocast" and opt.device != "cpu":
 else:
     precision_scope = nullcontext
 
-seeds = ""
 sample_path = outpath
 if opt.inpdir is not None:
     sample_path += "/samples/" + opt.inpdir.split("\\")[-1] + f"-{opt.strength}"
@@ -330,7 +329,7 @@ with torch.no_grad():
     for n in trange(opt.n_iter, desc="Sampling"):
         for file in tqdm(files, desc="files"):
             if os.path.isfile(f"{sample_path}/{file[1]}-1-{opt.seed}.png"):
-                print(f"skipping {file[1]}-1-{opt.seed}.png already exists")
+                print(f"\nskipping {file[1]}-1-{opt.seed}.png already exists")
                 continue
             for prompts in tqdm(data, desc="data"):
                 with precision_scope("cuda"):
@@ -401,8 +400,6 @@ with torch.no_grad():
                         except:
                             img.save(f"{sample_path}/out.png")
                             print(f"{sample_path}/out.png")
-                        seeds += str(opt.seed) + ","
-                        opt.seed += 1
                         base_count += 1
 
                     if opt.device != "cpu":
@@ -422,7 +419,5 @@ print(
     (
         "Samples finished in {0:.2f} minutes and exported to "
         + sample_path
-        + "\n Seeds used = "
-        + seeds[:-1]
     ).format(time_taken)
 )
