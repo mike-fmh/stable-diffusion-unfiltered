@@ -259,9 +259,9 @@ if not opt.from_file:
     assert opt.prompt is not None
     prompt = opt.prompt
     data = [batch_size * [prompt]]
-
 else:
     print(f"reading prompts from {opt.from_file}")
+    prompt = opt.from_file.split("\\")[-1]
     with open(opt.from_file, "r") as f:
         data = f.read().splitlines()
         data = batch_size * list(data)
@@ -289,9 +289,9 @@ else:
 
 sample_path = outpath
 if opt.inpdir is not None:
-    sample_path += "/samples/" + opt.inpdir.split("\\")[-1] + f"--strength_{opt.strength}"
+    sample_path += "/samples/" + opt.inpdir.split("\\")[-1] + f"_{prompt}_--strength_{opt.strength}"
 else:
-    sample_path += f"/samples/result--strength_{opt.strength}"
+    sample_path += f"/samples/result_{prompt}_--strength_{opt.strength}"
 os.makedirs(sample_path, exist_ok=True)
 base_count = len(os.listdir(sample_path))
 with torch.no_grad():
@@ -364,7 +364,8 @@ with torch.no_grad():
                         z_enc,
                         unconditional_guidance_scale=opt.scale,
                         unconditional_conditioning=uc,
-                        sampler = opt.sampler
+                        sampler=opt.sampler,
+                        desc=file
                     )
 
                     modelFS.to(opt.device)
