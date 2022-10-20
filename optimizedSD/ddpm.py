@@ -485,7 +485,7 @@ class UNet(DDPM):
                log_every_t=100,
                unconditional_guidance_scale=1.,
                unconditional_conditioning=None,
-               ):
+               desc=None):
         
 
         if(self.turbo):
@@ -528,7 +528,7 @@ class UNet(DDPM):
         elif sampler == "ddim":
             samples = self.ddim_sampling(x_latent, conditioning, S, unconditional_guidance_scale=unconditional_guidance_scale,
                                          unconditional_conditioning=unconditional_conditioning,
-                                         mask = mask,init_latent=x_T,use_original_steps=False)
+                                         mask = mask,init_latent=x_T,use_original_steps=False, desc=desc)
 
         elif sampler == "euler":
             self.make_schedule(ddim_num_steps=S, ddim_eta=eta, verbose=False)
@@ -706,15 +706,16 @@ class UNet(DDPM):
 
     @torch.no_grad()
     def ddim_sampling(self, x_latent, cond, t_start, unconditional_guidance_scale=1.0, unconditional_conditioning=None,
-               mask = None,init_latent=None,use_original_steps=False):
+               mask = None,init_latent=None,use_original_steps=False, desc=None):
 
         timesteps = self.ddim_timesteps
         timesteps = timesteps[:t_start]
         time_range = np.flip(timesteps)
         total_steps = timesteps.shape[0]
         #print(f"Running DDIM Sampling with {total_steps} timesteps")
-
-        iterator = tqdm(time_range, desc='Decoding image', total=total_steps)
+        if desc is None:
+            desc = 'Decoding image'
+        iterator = tqdm(time_range, desc=desc, total=total_steps)
         x_dec = x_latent
         x0 = init_latent
         for i, step in enumerate(iterator):
