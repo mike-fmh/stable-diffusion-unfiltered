@@ -267,45 +267,15 @@ else:
         data = batch_size * list(data)
         data = list(chunk(sorted(data), batch_size))
 
-modelFS.to(opt.device)
-
 files = []
 if opt.inpdir is None:
-    assert os.path.isfile(opt.init_img)
-    init_image = load_img(opt.init_img, opt.H, opt.W).to(opt.device)
-    if opt.device != "cpu" and opt.precision == "autocast":
-        model.half()
-        modelCS.half()
-        modelFS.half()
-        init_image = init_image.half()
-    init_image = repeat(init_image, "1 ... -> b ...", b=batch_size)
-    init_latent = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image))  # move to latent space
-    files.append([init_latent, opt.init_img.split("\\")[-1]])
+    files.append(opt.init_img.split("\\")[-1])
 else:
-    for file in tqdm(os.listdir(opt.inpdir), desc="Loading files"):
+    for file in tqdm(os.listdir(opt.inpdir), desc="Appending files"):
         filename = os.fsdecode(file)
-        assert os.path.isfile(os.path.join(opt.inpdir, filename))
-        init_image = load_img(os.path.join(opt.inpdir, filename), opt.H, opt.W).to(opt.device)
-        if opt.device != "cpu" and opt.precision == "autocast":
-            model.half()
-            modelCS.half()
-            modelFS.half()
-            init_image = init_image.half()
-        if ".png" not in filename:
-            continue
-        init_image = repeat(init_image, "1 ... -> b ...", b=batch_size)
-        init_latent = modelFS.get_first_stage_encoding(modelFS.encode_first_stage(init_image))  # move to latent space
-        filename = filename.split(".")[0]
+        files.append(filename)
         # print("\n" + filename)
-        files.append([init_latent, filename])
-    print(len(files))
-
-if opt.device != "cpu":
-    mem = torch.cuda.memory_allocated(device=opt.device) / 1e6
-    modelFS.to("cpu")
-    while torch.cuda.memory_allocated(device=opt.device) / 1e6 >= mem:
-        time.sleep(1)
-
+    print(len(files), "total files in inpdir")
 
 assert 0.0 <= opt.strength <= 1.0, "can only work with strength in [0.0, 1.0]"
 t_enc = int(opt.strength * opt.ddim_steps)
@@ -328,10 +298,30 @@ with torch.no_grad():
     all_samples = list()
     for n in trange(opt.n_iter, desc="Sampling"):
         for file in tqdm(files, desc="files"):
-            if os.path.isfile(f"{sample_path}/{file[1]}-1-{opt.seed}.png"):
-                print(f"\nskipping {file[1]}-1-{opt.seed}.png already exists")
+            modelFS.to(opt.device)
+            filename = file.split(".")[0]
+            if os.path.isfile(f"{sample_path}/{filename}-1-{opt.seed}.png"):
+                print(f"\nskipping {filename}-1-{opt.seed}.png already exists")
                 continue
-            for prompts in tqdm(data, desc="data"):
+            if ".png" not in file:
+                continue
+            assert os.path.isfile(os.path.join(opt.inpdir, file))
+            init_image = load_img(os.path.join(opt.inpdir, file), opt.H, opt.W).to(opt.device)
+            if opt.device != "cpu" and opt.precision == "autocast":
+                model.half()
+                modelCS.half()
+                modelFS.half()
+                init_image = init_image.half()
+            init_image = repeat(init_image, "1 ... -> b ...", b=batch_size)
+            init_latent = modelFS.get_first_stage_encoding(
+                modelFS.encode_first_stage(init_image))  # move to latent space
+
+            if opt.device != "cpu":
+                mem = torch.cuda.memory_allocated(device=opt.device) / 1e6
+                modelFS.to("cpu")
+                while torch.cuda.memory_allocated(device=opt.device) / 1e6 >= mem:
+                    time.sleep(1)
+            for prompts in tqdm(data, desc="data", disable=True):
                 with precision_scope("cuda"):
                     modelCS.to(opt.device)
                     uc = None
@@ -361,7 +351,7 @@ with torch.no_grad():
 
                     # encode (scaled latent)
                     z_enc = model.stochastic_encode(
-                        file[0],
+                        init_latent,
                         torch.tensor([t_enc] * batch_size).to(opt.device),
                         opt.seed,
                         opt.ddim_eta,
@@ -378,7 +368,6 @@ with torch.no_grad():
                     )
 
                     modelFS.to(opt.device)
-                    print("saving images")
                     for i in range(batch_size):
 
                         x_samples_ddim = modelFS.decode_first_stage(samples_ddim[i].unsqueeze(0))
@@ -387,7 +376,7 @@ with torch.no_grad():
                         img = Image.fromarray(x_sample.astype(np.uint8))
                         #img.save(os.path.join(sample_path, "seed_" + str(opt.seed) + "_" + f"{base_count:05}.{opt.format}"))
                         fileexists = True
-                        fname = file[1]
+                        fname = filename
                         i = 0
                         while fileexists:
                             i += 1
@@ -396,10 +385,8 @@ with torch.no_grad():
                             fileexists = os.path.isfile(f"{sample_path}/{use_fname}.png")
                         try:
                             img.save(f"{sample_path}/{use_fname}.png")
-                            print(f"{sample_path}/{use_fname}.png")
                         except:
                             img.save(f"{sample_path}/out.png")
-                            print(f"{sample_path}/out.png")
                         base_count += 1
 
                     if opt.device != "cpu":
@@ -409,7 +396,6 @@ with torch.no_grad():
                             time.sleep(1)
 
                     del samples_ddim
-                    print("memory_final = ", torch.cuda.memory_allocated(device=opt.device) / 1e6)
 
 toc = time.time()
 
