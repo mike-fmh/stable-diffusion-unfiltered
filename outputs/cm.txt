@@ -17,4 +17,9 @@ python optimizedSD\optimized_img2img.py --inpdir "E:\Documents\Github\stable-dif
 --scale determines how much to stick to --prompt
 
 
-python optimizedSD\optimized_img2img.py --inpdir "E:\Documents\Github\stable-diffusion-unfiltered\outputs\img2img-samples\heatwave_imgs_1024x574" --seed 172 --strength 0.3 --turbo --prompt "artistic rendering" --scale 100
+python optimizedSD\optimized_img2img.py --inpdir "E:\Documents\Github\stable-diffusion-unfiltered\outputs\img2img-samples\input images\heatwave_imgs_1024x574" --seed 172 --strength 0.3 --turbo --prompt "artistic rendering" --scale 100
+python optimizedSD\optimized_img2img.py --inpdir "E:\Documents\Github\stable-diffusion-unfiltered\outputs\img2img-samples\input images\heatwave_imgs_1024x574" --seed 172 --strength 0.2 --turbo --prompt "artistic rendering" --scale 50
+
+
+python optimizedSD\optimized_img2img.py --inpdir "E:\Documents\Github\stable-diffusion-unfiltered\outputs\img2img-samples\input images\heatwave_imgs_1024x574" --seed 172 --strength 0.3 --turbo --scale 100
+
