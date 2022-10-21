@@ -2,7 +2,7 @@ import cv2
 import os
 import unicodedata
 import re
-
+import tqdm
 
 def slugify(value, allow_unicode=False):
     """
@@ -59,7 +59,7 @@ def convert_to_valid_filename(filename, extension):
     return use_fname + extension
 
 
-image_folder = r"E:\Documents\Github\stable-diffusion-unfiltered\outputs\img2img-samples\samples\heatwave_imgs"
+image_folder = r"E:\Documents\Github\stable-diffusion-unfiltered\outputs\img2img-samples\samples\heatwave_imgs_1024x574_artistic rendering_--strength_0.3_--scale_100.0"
 video_name = convert_to_valid_filename(image_folder.split("\\")[-1], ".avi")
 
 images, imnames = [], []
@@ -73,9 +73,9 @@ print(imnames)
 frame = cv2.imread(os.path.join(image_folder, images[0]))
 height, width, layers = frame.shape
 
-video = cv2.VideoWriter(video_name, 0, 60, (width, height))
+video = cv2.VideoWriter(video_name, 0, 25, (width, height))
 
-for image in images:
+for image in tqdm.tqdm(images):
     #   print(image)
     video.write(cv2.imread(os.path.join(image_folder, image)))
 
