@@ -289,9 +289,9 @@ else:
 
 sample_path = outpath
 if opt.inpdir is not None:
-    sample_path += "/samples/" + opt.inpdir.split("\\")[-1] + f"_{prompt}_--strength_{opt.strength}"
+    sample_path += "/samples/" + opt.inpdir.split("\\")[-1] + f"_{prompt}_--strength_{opt.strength}_--scale_{opt.scale}"
 else:
-    sample_path += f"/samples/result_{prompt}_--strength_{opt.strength}"
+    sample_path += f"/samples/result_{prompt}_--strength_{opt.strength}_--scale_{opt.scale}"
 os.makedirs(sample_path, exist_ok=True)
 base_count = len(os.listdir(sample_path))
 with torch.no_grad():
@@ -303,8 +303,8 @@ with torch.no_grad():
             if os.path.isfile(f"{sample_path}/{filename}-1-{opt.seed}.png"):
                 print(f"\nskipping {filename}-1-{opt.seed}.png already exists")
                 continue
-            if ".png" not in file:
-                continue
+           # if ".png" not in file:
+           #     continue
             assert os.path.isfile(os.path.join(opt.inpdir, file))
             init_image = load_img(os.path.join(opt.inpdir, file), opt.H, opt.W).to(opt.device)
             if opt.device != "cpu" and opt.precision == "autocast":
