@@ -59,13 +59,18 @@ def convert_to_valid_filename(filename, extension):
     return use_fname + extension
 
 
-image_folder = r"E:\Documents\Github\stable-diffusion-unfiltered\outputs\img2img-samples\samples\heatwave_imgs_1024x574_artistic rendering_--strength_0.3_--scale_100.0"
+image_folder = r"E:\Documents\shrek\frames\allstar"
 video_name = convert_to_valid_filename(image_folder.split("\\")[-1], ".avi")
 
 images, imnames = [], []
 for img in os.listdir(image_folder):
     images.append(img)
-    imnames.append(int(img.split("-")[0]))
+    try:
+        # filename formatted like 0-1.png
+        imnames.append(int(img.split("-")[0]))
+    except:
+        # filename formatted like 0.png
+        imnames.append(int(img.split(".")[0]))
 bi_bubble_sort(imnames, images)
 print(images)
 print(imnames)
@@ -73,7 +78,7 @@ print(imnames)
 frame = cv2.imread(os.path.join(image_folder, images[0]))
 height, width, layers = frame.shape
 
-video = cv2.VideoWriter(video_name, 0, 25, (width, height))
+video = cv2.VideoWriter(video_name, 0, 30, (width, height))
 
 for image in tqdm.tqdm(images):
     #   print(image)
