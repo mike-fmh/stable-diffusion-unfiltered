@@ -42,6 +42,33 @@ def slugify(value, allow_unicode=False):
     return re.sub(r'[-\s]+', '-', value).strip('-_')
 
 
+def bi_bubble_sort(array, array_to_follow):
+    n = len(array)
+    for i in range(n):
+        # Create a flag that will allow the function to
+        # terminate early if there's nothing left to sort
+        already_sorted = True
+        # Start looking at each item of the list one by one,
+        # comparing it with its adjacent value. With each
+        # iteration, the portion of the array that you look at
+        # shrinks because the remaining items have already been
+        # sorted.
+        for j in range(n - i - 1):
+            if array[j] > array[j + 1]:
+                # If the item you're looking at is greater than its
+                # adjacent value, then swap them
+                array[j], array[j + 1] = array[j + 1], array[j]
+                array_to_follow[j], array_to_follow[j+1] = array_to_follow[j+1], array_to_follow[j]
+                # Since you had to swap two elements,
+                # set the `already_sorted` flag to `False` so the
+                # algorithm doesn't finish prematurely
+                already_sorted = False
+        # If there were no swaps during the last iteration,
+        # the array is already sorted, and you can terminate
+        if already_sorted:
+            break
+
+
 def chunk(it, size):
     it = iter(it)
     return iter(lambda: tuple(islice(it, size)), ())
@@ -267,14 +294,19 @@ else:
         data = batch_size * list(data)
         data = list(chunk(sorted(data), batch_size))
 
-files = []
+# inpdir should contain frames of a video titled 0.png, 1.png...etc
+files, nums = [], []
 if opt.inpdir is None:
     files.append(opt.init_img.split("\\")[-1])
+    nums.append(int(files[-1].split(".")[0]))
 else:
     for file in tqdm(os.listdir(opt.inpdir), desc="Appending files"):
         filename = os.fsdecode(file)
         files.append(filename)
+        # nums will mirror files, and will be used to sort both lists
+        nums.append(int(files[-1].split(".")[0]))
         # print("\n" + filename)
+    bi_bubble_sort(nums, files)
     print(len(files), "total files in inpdir")
 
 assert 0.0 <= opt.strength <= 1.0, "can only work with strength in [0.0, 1.0]"
