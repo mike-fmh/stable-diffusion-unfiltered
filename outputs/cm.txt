@@ -27,4 +27,8 @@ python optimizedSD\optimized_img2img.py --inpdir "E:\Documents\Github\stable-dif
 python optimizedSD\optimized_img2img.py --inpdir "E:\Documents\Github\stable-diffusion-unfiltered\outputs\img2img-samples\input images\heatwave_imgs_1024x574" --seed 172 --strength 0.3 --turbo --prompt "photorealistic, 4k detail" --scale 100
 
 
-optimized_img2img.py --inpdir "E:\Documents\shrek\frames\allstar" --outdir "E:\Documents\shrek\frames\allstar_ai" --seed 172 --strength 0.3 --turbo --prompt "photorealistic, 4k detail" --scale 100
+python optimizedSD\optimized_img2img.py --inpdir "E:\Documents\shrek\frames\allstar" --outdir "E:\Documents\shrek\frames\allstar_ai -strength0.3 prompt=photorealistic, 4k detail" --seed 172 --strength 0.3 --turbo --prompt "photorealistic, 4k detail" --scale 100
+
+python optimizedSD\optimized_img2img.py --inpdir "E:\Documents\shrek\frames\allstar" --outdir "E:\Documents\shrek\frames\futuristic_str0.2_sca30" --seed 172 --strength 0.2 --turbo --prompt "futuristic" --scale 30
+
+
