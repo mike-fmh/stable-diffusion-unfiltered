@@ -288,10 +288,13 @@ else:
     precision_scope = nullcontext
 
 sample_path = outpath
-if opt.inpdir is not None:
-    sample_path += "/samples/" + opt.inpdir.split("\\")[-1] + f"_{prompt}_--strength_{opt.strength}_--scale_{opt.scale}"
+if opt.inpdir is None:
+    if opt.outdir is None:
+        sample_path += f"/samples/result_{prompt}_--strength_{opt.strength}_--scale_{opt.scale}"
 else:
-    sample_path += f"/samples/result_{prompt}_--strength_{opt.strength}_--scale_{opt.scale}"
+    if opt.outdir is None:
+        sample_path += "/samples/" + opt.inpdir.split("\\")[-1] + f"_{prompt}_--strength_{opt.strength}_--scale_{opt.scale}"
+
 os.makedirs(sample_path, exist_ok=True)
 base_count = len(os.listdir(sample_path))
 with torch.no_grad():
