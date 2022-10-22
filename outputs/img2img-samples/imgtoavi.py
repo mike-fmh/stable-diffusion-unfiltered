@@ -4,6 +4,25 @@ import unicodedata
 import re
 import tqdm
 
+
+INPUT_DIR = r"E:\Documents\shrek\frames\allstar"
+
+# output dir will become input dir without the last directory
+OUTPUT_DIR = ""
+for i in range(len(INPUT_DIR)):
+    OUTPUT_DIR += INPUT_DIR[i]
+    found_slash = False
+    for j in range(i, len(INPUT_DIR)):
+        if INPUT_DIR[j] == "\\":
+            found_slash = True
+            break
+    if found_slash:
+        continue
+    else:
+        break
+OUTPUT_DIR = OUTPUT_DIR[:-1]
+
+
 def slugify(value, allow_unicode=False):
     """
     Taken from https://github.com/django/django/blob/master/django/utils/text.py
@@ -59,8 +78,9 @@ def convert_to_valid_filename(filename, extension):
     return use_fname + extension
 
 
-image_folder = r"E:\Documents\shrek\frames\allstar"
-video_name = convert_to_valid_filename(image_folder.split("\\")[-1], ".avi")
+image_folder = INPUT_DIR
+video_name = OUTPUT_DIR + convert_to_valid_filename(image_folder.split("\\")[-1], ".avi")
+print(video_name)
 
 images, imnames = [], []
 for img in os.listdir(image_folder):
