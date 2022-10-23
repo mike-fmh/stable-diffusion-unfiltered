@@ -372,7 +372,7 @@ with torch.no_grad():
 
                         base_count += 1
                         if opt.iterateseed == 1:
-                            opt.seed += 1
+                            randint(0, 1000000)
 
                     if opt.device != "cpu":
                         mem = torch.cuda.memory_allocated() / 1e6
@@ -390,7 +390,5 @@ print(
     (
         "Samples finished in {0:.2f} minutes and exported to "
         + sample_path
-        + "\n Seeds used = "
-        + seeds[:-1]
     ).format(time_taken)
 )
