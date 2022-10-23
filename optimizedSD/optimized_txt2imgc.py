@@ -164,8 +164,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--iterateseed",
-    type=int,
-    default=0,
+    action="store_true",
 )
 parser.add_argument(
     "--unet_bs",
@@ -218,7 +217,7 @@ seed_everything(opt.seed)
 
 # Logging
 logger(vars(opt), log_csv = "logs/txt2img_logs.csv")
-
+print("Random Seeds:", opt.iterateseed, "\n")
 sd = load_model_from_config(f"{opt.ckpt}")
 li, lo = [], []
 for key, value in sd.items():
@@ -371,8 +370,6 @@ with torch.no_grad():
                             img.save(f"{sample_path}/out.png")
 
                         base_count += 1
-                        if opt.iterateseed == 1:
-                            randint(0, 1000000)
 
                     if opt.device != "cpu":
                         mem = torch.cuda.memory_allocated() / 1e6
@@ -381,6 +378,9 @@ with torch.no_grad():
                             time.sleep(1)
                     del samples_ddim
                     print("memory_final = ", torch.cuda.memory_allocated() / 1e6)
+
+                if opt.iterateseed:
+                    randint(0, 1000000)
 
 toc = time.time()
 
