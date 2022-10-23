@@ -163,6 +163,11 @@ parser.add_argument(
     help="the seed (for reproducible sampling)",
 )
 parser.add_argument(
+    "--iterateseed",
+    type=int,
+    default=0,
+)
+parser.add_argument(
     "--unet_bs",
     type=int,
     default=1,
@@ -365,8 +370,9 @@ with torch.no_grad():
                         except:
                             img.save(f"{sample_path}/out.png")
 
-                        opt.seed += 1
                         base_count += 1
+                        if opt.iterateseed == 1:
+                            opt.seed += 1
 
                     if opt.device != "cpu":
                         mem = torch.cuda.memory_allocated() / 1e6
