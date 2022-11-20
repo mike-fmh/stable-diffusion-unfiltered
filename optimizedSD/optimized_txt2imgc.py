@@ -232,7 +232,20 @@ parser.add_argument(
     help="path to checkpoint of model",
     default="1.4",
 )
+parser.add_argument(
+    "--artistseed",
+    action="store_true",
+    help="adds \"by [random artist]\" at the end of each prompt",
+)
 opt = parser.parse_args()
+
+
+ARTISTS = ["Irina French", "Mandy Jurgens", "Heraldo Ortega", "Jeszika Le Vye", "Dan Volbert", "Barret Frymire",
+           "David Villegas", "Lim Chuan Shin", "Małgorzata Kmiec", "Alyn Spiller", "Dang My Linh", "Finnian MacManus",
+           "greg rutkowski", "dan mumford", "yoshitaka amano", "makoto shinkai", "Alayna Danner", "Simon Cowell",
+           "Ricardo Ow"]
+
+
 
 tic = time.time()
 os.makedirs(opt.outdir, exist_ok=True)
@@ -266,7 +279,7 @@ for i in range(len(opt.models)):
     model, model_name = opt.models[i], tempmodels[i]
     opt.ckpt = model
     print(f"\n Running with model {model}")
-    print("Random Seeds:", opt.iterateseed, "\n")
+    print("Iterate Seed:", opt.iterateseed, "\n")
     sd = load_model_from_config(f"{opt.ckpt}")
     li, lo = [], []
     for key, value in sd.items():
@@ -352,8 +365,15 @@ for i in range(len(opt.models)):
         all_samples = list()
         for n in range(opt.n_iter):
             for j in tqdm(range(len(filenames_w_append)), desc="lines"):
+                if os.path.isfile(f"{sample_path}/{slugify(filenames[j])}-1-{opt.seed}-{opt.sampler}.png"):
+                    print(f"\nskipping {filenames[j]}-1-{opt.seed}.png already exists")
+                    if opt.iterateseed:
+                        opt.seed += 1
+                    continue
                 line = filenames_w_append[j]
-                print(line)
+                if opt.artistseed:
+                    line += f", by {ARTISTS[opt.seed % len(ARTISTS)]}"
+                print("\n", line)
                 if opt.allsamplers:
                     run_samplers = avail_samplers
                 else:
