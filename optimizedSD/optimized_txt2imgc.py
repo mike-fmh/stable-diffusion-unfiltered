@@ -316,11 +316,12 @@ for i in range(len(opt.models)):
     batch_size = opt.n_samples
     n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
 
-    filelines, data = [], []
+    filenames_w_append, filenames, data = [], [], []  # 'filenames' will be the prompts without --append
     if not opt.from_file:
         assert opt.prompt is not None
         prompt = opt.prompt
-        filelines.append(prompt)
+        filenames_w_append.append(prompt)
+        filenames.append(prompt)
         print(f"Using prompt: {prompt}")
         data = [batch_size * [prompt]]
     else:
@@ -329,7 +330,8 @@ for i in range(len(opt.models)):
             prompt = opt.from_file.split("\\")[-1].split(".")[0]
             lines = f.readlines()
             for line in tqdm(lines, desc="read file lines"):
-                filelines.append(line.strip() + opt.append)
+                filenames_w_append.append(line.strip() + opt.append)
+                filenames.append(line.strip())
             data = list(chunk(data, batch_size))
 
     if opt.precision == "autocast" and opt.device != "cpu":
@@ -349,13 +351,14 @@ for i in range(len(opt.models)):
 
         all_samples = list()
         for n in range(opt.n_iter):
-            for line in tqdm(filelines, desc="lines"):
+            for j in tqdm(range(len(filenames_w_append)), desc="lines"):
+                line = filenames_w_append[j]
+                print(line)
                 if opt.allsamplers:
                     run_samplers = avail_samplers
                 else:
                     run_samplers = [opt.sampler]
                 data = [line]
-                print(data)
                 for prompts in tqdm(data, desc="data"):
                     for sam in run_samplers:
                         opt.sampler = sam
@@ -414,17 +417,25 @@ for i in range(len(opt.models)):
                                 img = Image.fromarray(x_sample.astype(np.uint8))
                                 #img.save(os.path.join(sample_path, "seed_" + str(opt.seed) + "_" + f"{base_count:05}.{opt.format}"))
                                 fileexists = True
-                                fname = line
-                                i = 0
+                                fname = filenames[j]
+                                print(fname)
+                                e = 0
                                 while fileexists:
-                                    i += 1
-                                    use_fname = fname + f"-{i}-{opt.seed}-{opt.sampler}"
+                                    e += 1
+                                    use_fname = fname + f"-{e}-{opt.seed}-{opt.sampler}"
                                     use_fname = slugify(use_fname)
                                     fileexists = os.path.isfile(f"{sample_path}/{use_fname}.png")
                                 try:
                                     img.save(f"{sample_path}/{use_fname}.png")
                                 except:
-                                    img.save(f"{sample_path}/out.png")
+                                    fileexists = True
+                                    fname = "out"
+                                    e = 0
+                                    while fileexists:
+                                        e += 1
+                                        use_fname = fname + f"-{e}-{opt.seed}-{opt.sampler}"
+                                        use_fname = slugify(use_fname)
+                                        fileexists = os.path.isfile(f"{sample_path}/{use_fname}.png")
 
                                 base_count += 1
 
