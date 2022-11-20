@@ -33,4 +33,4 @@ python optimizedSD\optimized_img2img.py --inpdir "E:\Documents\shrek\frames\alls
 python optimizedSD\optimized_img2img.py --inpdir "E:\Documents\shrek\frames\allstar" --outdir "E:\Documents\shrek\frames\futuristic_str0.2_sca30" --seed 172 --strength 0.2 --turbo --prompt "futuristic" --scale 30
 
 
-python optimizedSD\optimized_txt2imgc.py --W 512 --H 512 --from-file "E:\Documents\Github\stable-diffusion-unfiltered\outputs\humble.txt" --model 1.5e --turbo --sample euler_a --seed 100 --append ", digital illustration, volumetric, highly detailed, composition, 4 k photorealism, octane render" --iterateseed --artistseed
+python optimizedSD\optimized_txt2imgc.py --W 1024 --H 576 --from-file "E:\Documents\Github\stable-diffusion-unfiltered\outputs\humble.txt" --model 1.5e --turbo --sample euler_a --seed 100 --append ", digital illustration, volumetric, highly detailed, composition, 4 k photorealism, octane render" --iterateseed --artistseed
