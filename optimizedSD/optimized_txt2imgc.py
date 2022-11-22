@@ -243,7 +243,7 @@ opt = parser.parse_args()
 ARTISTS = ["Irina French", "Mandy Jurgens", "Heraldo Ortega", "Jeszika Le Vye", "Dan Volbert", "Barret Frymire",
            "David Villegas", "Lim Chuan Shin", "Małgorzata Kmiec", "Alyn Spiller", "Dang My Linh", "Finnian MacManus",
            "greg rutkowski", "dan mumford", "contemporary artist", "Alayna Danner", "Simon Cowell",
-           "Ricardo Ow", "Unreal Engine", "Source Engine", "Realistic Photo"]
+           "Ricardo Ow", "Realistic Photo"]
 
 
 
