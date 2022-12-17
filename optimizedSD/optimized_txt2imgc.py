@@ -213,7 +213,7 @@ parser.add_argument(
     type=str,
     help="sampler",
     choices=["ddim", "plms","heun", "euler", "euler_a", "dpm2", "dpm2_a", "lms"],
-    default="plms",
+    default="euler_a",
 )
 parser.add_argument(
     "--allsamplers",
@@ -230,7 +230,7 @@ parser.add_argument(
     "--models",
     type=str,
     help="path to checkpoint of model",
-    default="1.4",
+    default="1.5e",
 )
 parser.add_argument(
     "--artistseed",
@@ -275,6 +275,7 @@ else:
 opt.models, tempmodels = tempmodels, opt.models
 
 print(opt.models)
+print(f"using sampler: {opt.sampler}")
 for i in range(len(opt.models)):
     model, model_name = opt.models[i], tempmodels[i]
     opt.ckpt = model
