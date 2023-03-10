@@ -16,7 +16,7 @@ python optimizedSD\optimized_img2img.py --inpdir "E:\Documents\Github\stable-dif
 
 --strength determines how closely outputs will be to input image
 --scale determines how much to stick to --prompt
-adding a scale of 1 is the same as adding no prompt at all
+adding a scale of 10 is the same as adding no prompt at all
 
 
 python optimizedSD\optimized_img2img.py --inpdir "E:\Documents\Github\stable-diffusion-unfiltered\outputs\img2img-samples\input images\heatwave_imgs_1024x574" --seed 172 --strength 0.3 --turbo --prompt "artistic rendering" --scale 100
