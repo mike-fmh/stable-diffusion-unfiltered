@@ -246,7 +246,6 @@ ARTISTS = ["Irina French", "Mandy Jurgens", "Heraldo Ortega", "Jeszika Le Vye", 
            "Ricardo Ow", "Realistic Photo"]
 
 
-
 tic = time.time()
 os.makedirs(opt.outdir, exist_ok=True)
 outpath = opt.outdir
@@ -358,7 +357,15 @@ for i in range(len(opt.models)):
         sample_path += f"/samples/{prompt}_--scale_{opt.scale}"
 
     sample_path += f"/{model_name}"
-    os.makedirs(sample_path, exist_ok=True)
+    try:
+        os.makedirs(sample_path, exist_ok=True)
+    except FileNotFoundError:
+        sample_path = outpath
+        if opt.outdir == "outputs/txt2img-samples":
+            sample_path += f"/samples/output_--scale_{opt.scale}"
+
+        sample_path += f"/{model_name}"
+        os.makedirs(sample_path, exist_ok=True)
 
     avail_samplers = ["plms", "euler", "euler_a"]
     with torch.no_grad():
@@ -439,7 +446,6 @@ for i in range(len(opt.models)):
                                 #img.save(os.path.join(sample_path, "seed_" + str(opt.seed) + "_" + f"{base_count:05}.{opt.format}"))
                                 fileexists = True
                                 fname = filenames[j]
-                                print(fname)
                                 e = 0
                                 while fileexists:
                                     e += 1
@@ -457,6 +463,8 @@ for i in range(len(opt.models)):
                                         use_fname = fname + f"-{e}-{opt.seed}-{opt.sampler}"
                                         use_fname = slugify(use_fname)
                                         fileexists = os.path.isfile(f"{sample_path}/{use_fname}.png")
+                                    img.save(f"{sample_path}/{use_fname}.png")
+                                print(f"\nsaved as {sample_path}/{use_fname}.png")
 
                                 base_count += 1
 
