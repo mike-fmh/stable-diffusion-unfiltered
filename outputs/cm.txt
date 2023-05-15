@@ -2,6 +2,7 @@ cd /d "E:\Github\stable-diffusion-unfiltered\"
 conda activate ldm
 
 python scripts\txt2img.py --W 512 --H 512 --skip_grid --n_samples 1 --n_iter 1 --from-file  --append ""
+python "E:\GitHub\stable-diffusion-unfiltered\optimizedSD\optimized_txt2imgc.py" --skip_grid --n_samples 1 --n_iter 1 --turbo --prompt "robot"
 python optimizedSD\optimized_txt2imgc.py --W 1024 --H 576 --from-file "E:\Documents\Github\stable-diffusion-unfiltered\outputs\txt2img-samples\whole lotta love.txt"  --append ""
 
 python scripts\img2imgc.py --inpdir
@@ -15,6 +16,7 @@ python optimizedSD\optimized_img2img.py --inpdir "E:\Documents\Github\stable-dif
 
 
 --strength determines how closely outputs will be to input image
+adding a strength of 1 is the same as having no input image
 --scale determines how much to stick to --prompt
 adding a scale of 10 is the same as adding no prompt at all
 
